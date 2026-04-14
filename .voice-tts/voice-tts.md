@@ -3,13 +3,13 @@
 - Role: `.voice-tts/` 문서 체계의 최상위 진입점
 - Source Type: Control Tower / Canonical Entry
 - Baseline Date: 2026-04-14 (KST)
-- Current Phase: Phase 1 local-first bootstrap closed / Phase 2 core synthesis MVP active-next
+- Current Phase: Phase 2 local synthesis MVP closed / Phase 3 diagnostics and model lifecycle active-next
 - Update Trigger: 상위 기준선, active focus, 문서 소유권, phase 요약이 바뀔 때
 - Excluded Content: 상세 구현 로그, 장기 설계 해설, 세부 WO 이력
 
 ## 1. Purpose
 
-이 문서는 `voice-tts` 프로젝트 문서 체계의 control tower다. 현재 기준선은 **웹/API보다 로컬 실행 가능성이 먼저 열린 local-first MVP bootstrap**이다.
+이 문서는 `voice-tts` 프로젝트 문서 체계의 control tower다. 현재 기준선은 **local-first CLI 위에서 GPT-SoVITS v2 zero-shot synthesis가 열려 있는 상태**다.
 
 문서 체계의 소유권은 아래와 같다.
 
@@ -26,13 +26,13 @@
 
 | Item | Current Baseline |
 | --- | --- |
-| Product Identity | 이 저장소는 **로컬 전용 GPT-SoVITS TTS bootstrap 프로젝트**다. 현재는 CLI와 내부 seam이 열려 있고, 실제 합성은 아직 Phase 2 범위다. |
+| Product Identity | 이 저장소는 **로컬 전용 GPT-SoVITS TTS toolkit**이다. 현재는 CLI에서 실제 zero-shot WAV 합성 경로가 열려 있다. |
 | Canonical Doc Root | `.voice-tts/` |
 | Current Live Product Map | 현재 live 상태의 개발자-facing feature owner는 `.voice-tts/feature.md`다. |
-| Current Focus | 현재 기준선은 **Phase 2 core synthesis MVP 준비**다. Phase 1에서 `uv` 기반 패키지, `src/voice_tts`, `voice-tts version`, `voice-tts doctor`, 설정 로더, 내부 port/use case seam이 마련되었다. |
-| Architecture Program | `topology.md`는 local-first package canon과 Clean Architecture + DDD + port/adapter 원칙을, `mechanism.md`는 실제 파일/명령/테스트 사실을, `sprint.md`는 GPT-SoVITS adapter와 weight lifecycle 작업 순서를 소유한다. |
-| Implemented Highlights | `uv + pyproject`, `src/voice_tts` package, CLI entrypoint, self-check doctor, settings loader, placeholder engine/repository, architecture smoke tests, updated six-doc stack |
-| Open Follow-up | GPT-SoVITS 실제 adapter, local synthesis command, weight repository 구현, output audio path, richer doctor diagnostics, optional web/API adapter |
+| Current Focus | 현재 기준선은 **Phase 3 diagnostics and model lifecycle** 준비다. Phase 2에서 `voice-tts synthesize`, manifest-backed profile resolution, external checkout adapter, manual ref trim, output policy가 들어왔다. |
+| Architecture Program | `topology.md`는 local-first package canon과 Clean Architecture + DDD + port/adapter 원칙을, `mechanism.md`는 실제 파일/명령/테스트 사실을, `sprint.md`는 Phase 3의 diagnostics/model metadata 후속 작업을 소유한다. |
+| Implemented Highlights | `voice-tts version`, `voice-tts doctor`, `voice-tts synthesize`, `JsonModelProfileRepository`, `GptSovitsV2SpeechSynthesisEngine`, `config/model-profiles.example.json`, adapter smoke test, external opt-in smoke |
+| Open Follow-up | richer doctor diagnostics, profile metadata 확장, compatibility preflight, auto reference-audio assist, optional web/API adapter |
 
 ## 3. Phase Snapshot
 
@@ -40,8 +40,8 @@
 | --- | --- | --- |
 | Phase 0 Research and Harness | Closed baseline | 리서치 리포트와 local six-doc stack이 유지된다. |
 | Phase 1 Local-first Bootstrap | Closed | `uv` project, `src/voice_tts`, CLI, doctor, settings, tests가 들어왔다. |
-| Phase 2 Core Synthesis MVP | Active-next | GPT-SoVITS를 실제로 adapter seam에 연결하고 local synthesis command를 여는 단계다. |
-| Phase 3 Model Lifecycle and Diagnostics | Queued | weight metadata, model selection, richer doctor/diagnostics, runtime observability를 붙이는 단계다. |
+| Phase 2 Core Synthesis MVP | Closed | local synthesize command, manifest-backed profile resolution, external GPT-SoVITS adapter, WAV output path가 landed 되었다. |
+| Phase 3 Model Lifecycle and Diagnostics | Active-next | richer profile metadata, diagnostics, runtime validation을 붙이는 단계다. |
 | Phase 4 Optional Service Adapters | Queued | 필요 시 FastAPI, background worker, streaming surface를 추가하는 단계다. |
 
 ## 4. Canonical Six-Doc Stack
@@ -59,10 +59,10 @@
 
 | Drift | Current Evidence | Impact | Tracking |
 | --- | --- | --- | --- |
-| real GPT-SoVITS inference는 아직 없다 | placeholder engine/repository만 존재한다 | local CLI는 bootstrap 수준이며 synthesize는 아직 열리지 않았다 | `mechanism.md`, `sprint.md` |
-| 외부 weight/model path는 optional warning 수준이다 | `doctor`는 unset path를 Phase 1 warning으로 취급한다 | Phase 2에서 required policy를 더 엄격히 고정해야 한다 | `roadmap.md`, `sprint.md` |
+| external GPT-SoVITS checkout은 여전히 repo 밖 자산이다 | `VOICE_TTS_GPT_SOVITS_ROOT`와 manifest가 필요하다 | setup이 끝나지 않으면 `doctor`와 `synthesize`가 fail한다 | `mechanism.md`, `sprint.md` |
+| profile metadata는 아직 최소 계약만 있다 | manifest는 `id/version/tts_config_path` 중심이다 | compatibility preflight와 richer catalog는 Phase 3 과제다 | `roadmap.md`, `sprint.md` |
+| ref audio 정리는 수동 구간 지정에 머물러 있다 | `--ref-start-sec`, `--ref-end-sec`만 제공된다 | diarization/VAD/ASR assist는 아직 없다 | `feature.md`, `roadmap.md` |
 | web/API surface는 아직 intentionally absent다 | FastAPI/router가 없다 | local-first 흐름은 단순하지만 remote/service integration은 아직 논외다 | `topology.md`, `roadmap.md` |
-| Docker/runbook은 아직 없다 | repo에 container/runtime packaging이 없다 | 운영 재현성은 Phase 4 이후 별도 설계가 필요하다 | `mechanism.md`, `roadmap.md` |
 
 ## 6. Reading Order
 

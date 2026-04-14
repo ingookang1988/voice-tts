@@ -1,0 +1,9 @@
+{
+  "profiles": [
+    {
+      "id": "gsv2-default",
+      "version": "gpt-sovits-v2",
+      "tts_config_path": "D:/GPT-SoVITS/GPT_SoVITS/configs/tts_infer.yaml"
+    }
+  ]
+}

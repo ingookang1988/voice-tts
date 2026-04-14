@@ -4,13 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "voice-tts"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first bootstrap for a GPT-SoVITS voice TTS toolkit."
 readme = "README.md"
 requires-python = ">=3.10,<3.11"
 dependencies = [
+  "numpy>=2.2,<3.0",
   "pydantic>=2.11,<3.0",
   "pydantic-settings>=2.10,<3.0",
+  "soundfile>=0.13,<1.0",
   "typer>=0.16,<1.0",
 ]
 
@@ -28,3 +30,6 @@ packages = ["src/voice_tts"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --basetemp=.pytest_tmp"
+markers = [
+  "external: requires a local GPT-SoVITS checkout and real audio assets",
+]

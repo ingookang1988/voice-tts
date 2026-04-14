@@ -4,7 +4,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from voice_tts.exceptions import ManifestError
 from voice_tts.infrastructure.config import Settings
+from voice_tts.infrastructure.repositories import JsonModelProfileRepository
+from voice_tts.infrastructure.system import find_ffmpeg_executable
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,13 +40,16 @@ class DoctorReport:
 
 
 def run_doctor(settings: Settings) -> DoctorReport:
+    repository = JsonModelProfileRepository(settings.model_manifest)
     checks = (
         _python_version_check(),
         _device_policy_check(settings.default_device),
         _mutable_directory_check("workdir", settings.workdir),
         _mutable_directory_check("temp_root", settings.temp_root),
-        _optional_external_path_check("gpt_sovits_root", settings.gpt_sovits_root),
-        _optional_external_path_check("weights_root", settings.weights_root),
+        _mutable_directory_check("output_root", settings.output_root),
+        _required_external_path_check("gpt_sovits_root", settings.gpt_sovits_root),
+        _ffmpeg_check(),
+        _manifest_check(repository),
     )
     return DoctorReport(settings=settings, checks=checks)
 
@@ -83,11 +89,47 @@ def _has_existing_ancestor(path: Path) -> bool:
     return False
 
 
-def _optional_external_path_check(name: str, path: Path | None) -> DoctorCheck:
+def _required_external_path_check(name: str, path: Path | None) -> DoctorCheck:
     if path is None:
-        return DoctorCheck(name, "WARN", "not configured yet; optional during Phase 1")
+        return DoctorCheck(name, "FAIL", "required for Phase 2 synthesize but not configured")
     if not path.exists():
         return DoctorCheck(name, "FAIL", f"{path} does not exist")
     if not path.is_dir():
         return DoctorCheck(name, "FAIL", f"{path} is not a directory")
     return DoctorCheck(name, "PASS", f"{path} exists")
+
+
+def _ffmpeg_check() -> DoctorCheck:
+    ffmpeg = find_ffmpeg_executable()
+    if ffmpeg is None:
+        return DoctorCheck(
+            "ffmpeg",
+            "FAIL",
+            "ffmpeg was not found on PATH; install it before running synthesize",
+        )
+    return DoctorCheck("ffmpeg", "PASS", f"{ffmpeg} is available")
+
+
+def _manifest_check(repository: JsonModelProfileRepository) -> DoctorCheck:
+    try:
+        profiles = repository.list_profiles()
+    except ManifestError as exc:
+        return DoctorCheck("model_manifest", "FAIL", str(exc))
+
+    missing_config_paths = [
+        profile.id
+        for profile in profiles
+        if not profile.tts_config_path.exists()
+    ]
+    if missing_config_paths:
+        joined_profiles = ", ".join(missing_config_paths)
+        return DoctorCheck(
+            "model_manifest",
+            "FAIL",
+            f"{len(profiles)} profile(s) loaded, but config path is missing for: {joined_profiles}",
+        )
+    return DoctorCheck(
+        "model_manifest",
+        "PASS",
+        f"{len(profiles)} profile(s) loaded from {repository.manifest_path}",
+    )

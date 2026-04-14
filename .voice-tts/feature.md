@@ -3,69 +3,72 @@
 - Role: 현재 live 상태의 개발자-facing feature, hierarchy, actor-outcome, 작업 흐름, intentional hold를 기록하는 canonical feature SSOT
 - Source Type: Feature / Current Project Map
 - Baseline Date: 2026-04-14 (KST)
-- Current Phase: Phase 1 local-first bootstrap closed
+- Current Phase: Phase 2 local synthesis MVP closed
 - Update Trigger: current live feature surface, actor outcome, primary entry, flow, intentional hold가 바뀔 때
 - Excluded Content: phase 판단, 구조 규범, active WO, 상세 구현 증적
 
 ## 1. Document Role
 
-이 문서는 `voice-tts` 프로젝트의 **현재 live 상태**를 개발자 관점의 product language로 설명한다. 현재 repo는 service product보다 **local CLI bootstrap tool**이 먼저 존재한다.
+이 문서는 `voice-tts` 프로젝트의 **현재 live 상태**를 개발자 관점의 product language로 설명한다. 현재 repo는 service product보다 **local CLI synthesis tool**이 먼저 존재한다.
 
 ## 2. Current Project Feature Snapshot
 
 | Feature ID | Feature | Current Status | Summary |
 | --- | --- | --- | --- |
 | `FEAT-DOC-01` | Documentation Control Tower | `live` | `.voice-tts/voice-tts.md`를 기준으로 현재 phase, 읽기 순서, 문서 ownership을 확인할 수 있다. |
-| `FEAT-CLI-01` | Local CLI Surface | `live` | `voice-tts version`, `voice-tts doctor`를 통해 버전 조회와 bootstrap self-check를 실행할 수 있다. |
-| `FEAT-CFG-01` | Settings Bootstrap | `live` | `.env.example`와 `pydantic-settings` 기반으로 local config를 로드할 수 있다. |
-| `FEAT-ARCH-01` | Clean Architecture Seams | `live` | `SpeechSynthesisEngine`, `WeightRepository`, `SynthesizeSpeechUseCase` seam이 Phase 2 integration용으로 고정되어 있다. |
+| `FEAT-CLI-01` | Local CLI Surface | `live` | `voice-tts version`, `voice-tts doctor`, `voice-tts synthesize`를 통해 버전 조회, runtime self-check, 로컬 WAV 합성을 실행할 수 있다. |
+| `FEAT-CFG-01` | Settings and Manifest Bootstrap | `live` | `.env.example`, model profile manifest, `pydantic-settings` 기반으로 local config와 profile catalog를 로드할 수 있다. |
+| `FEAT-TTS-01` | Zero-shot Local Synthesis | `live` | external GPT-SoVITS v2 checkout을 adapter로 연결해 ref audio + prompt 기반 WAV 합성을 수행할 수 있다. |
+| `FEAT-ARCH-01` | Clean Architecture Seams | `live` | `SpeechSynthesisEngine`, `ModelProfileRepository`, `SynthesizeSpeechUseCase` seam이 유지된다. |
 
 ## 3. Feature Hierarchy
 
 | Feature ID | Parent Feature | Actors | Primary Outcome | Primary Entry Point | Current Status | Hold Note |
 | --- | --- | --- | --- | --- | --- | --- |
 | `FEAT-DOC-01` | `none` | 개발자 | 현재 기준선과 문서 읽기 순서를 파악한다 | `.voice-tts/voice-tts.md` | `live` | governance surface다 |
-| `FEAT-CLI-01` | `none` | 개발자 | 로컬 bootstrap 상태를 확인한다 | `uv run voice-tts doctor` | `live` | synthesize command는 아직 없다 |
-| `FEAT-CFG-01` | `none` | 개발자 | local env와 path policy를 로드하고 검증한다 | `.env.example`, `voice_tts.infrastructure.config.Settings` | `live` | real model path validation은 아직 얕다 |
-| `FEAT-ARCH-01` | `none` | 개발자 | Phase 2에서 GPT-SoVITS를 꽂을 seam을 재사용한다 | `src/voice_tts/domain`, `src/voice_tts/application` | `live` | placeholder implementation만 있다 |
+| `FEAT-CLI-01` | `none` | 개발자 | 로컬 상태 점검과 합성을 실행한다 | `uv run voice-tts doctor`, `uv run voice-tts synthesize` | `live` | external checkout setup이 prerequisite다 |
+| `FEAT-CFG-01` | `FEAT-CLI-01` | 개발자 | env + manifest로 model profile과 path policy를 로드한다 | `.env.example`, `config/model-profiles.example.json`, `voice_tts.infrastructure.config.Settings` | `live` | richer metadata는 아직 없다 |
+| `FEAT-TTS-01` | `FEAT-CLI-01` | 개발자 | zero-shot ref audio 합성으로 WAV를 만든다 | `voice_tts.infrastructure.engines.GptSovitsV2SpeechSynthesisEngine` | `live` | GPT-SoVITS v2 단일 버전만 지원한다 |
+| `FEAT-ARCH-01` | `none` | 개발자 | Phase 3 이후에도 domain/application seam을 재사용한다 | `src/voice_tts/domain`, `src/voice_tts/application` | `live` | service adapter는 아직 없다 |
 
 ## 4. Actor / Outcome Model
 
 | Actor | Current Outcome |
 | --- | --- |
-| 구현을 이어갈 개발자 | CLI와 문서를 읽고 Phase 2 진입점을 빠르게 찾는다. |
-| 환경을 점검하려는 개발자 | `voice-tts doctor`로 현재 local bootstrap 상태를 확인한다. |
-| 아키텍처 결정을 유지하려는 개발자 | domain/application seam을 보며 GPT-SoVITS integration 위치를 명확히 잡는다. |
+| 구현을 이어갈 개발자 | 문서와 CLI를 읽고 local synthesis path를 바로 실행하거나 확장할 수 있다. |
+| 환경을 점검하려는 개발자 | `voice-tts doctor`로 GPT-SoVITS root, ffmpeg, manifest 상태를 확인한다. |
+| 음성 합성을 수행하려는 개발자 | `voice-tts synthesize`로 zero-shot reference-audio WAV를 생성한다. |
+| 아키텍처 결정을 유지하려는 개발자 | domain/application seam을 보며 GPT-SoVITS integration 위치를 명확히 유지한다. |
 
 ## 5. E2E Flows
 
-### `FLOW-CLI-01` Local Bootstrap Check
+### `FLOW-CLI-01` Local Runtime Check
 
 - `Entry`: `uv run voice-tts doctor`
-- `Path`: settings 로드 -> Python version 확인 -> workdir/temp path 상태 확인 -> optional GPT-SoVITS/weights path 상태 확인 -> PASS/WARN/FAIL 요약 출력
+- `Path`: settings 로드 -> Python version 확인 -> workdir/temp/output 상태 확인 -> GPT-SoVITS root 확인 -> ffmpeg 확인 -> model manifest parse/profile count 확인 -> PASS/WARN/FAIL 요약 출력
 - `Current Surface`: CLI, settings loader, doctor report
-- `Current Hold Boundary`: 실제 model import나 inference는 아직 수행하지 않는다
+- `Current Hold Boundary`: actual model import는 하지 않지만 synthesis prerequisites는 강하게 검사한다
 
 ### `FLOW-CLI-02` Version Verification
 
 - `Entry`: `uv run voice-tts version`
 - `Path`: installed package version 출력
 - `Current Surface`: CLI
-- `Current Hold Boundary`: runtime/provider info는 아직 포함하지 않는다
+- `Current Hold Boundary`: provider inventory는 아직 포함하지 않는다
 
-### `FLOW-ARCH-01` Phase 2 Integration Start
+### `FLOW-CLI-03` Local Zero-shot Synthesis
 
-- `Entry`: `src/voice_tts/application/use_cases.py`
-- `Path`: command -> domain request -> `WeightRepository` -> `SpeechSynthesisEngine`
-- `Current Surface`: application/dto/use_case, domain ports
-- `Current Hold Boundary`: infrastructure는 placeholder이고 real adapter는 아직 없다
+- `Entry`: `uv run voice-tts synthesize`
+- `Path`: CLI flags -> command validation -> manifest profile resolution -> optional ffmpeg ref trim -> external GPT-SoVITS import -> synthesis -> WAV write
+- `Current Surface`: CLI, application/use case, model profile repository, GPT-SoVITS adapter
+- `Current Hold Boundary`: zero-shot 단일 경로만 지원하며 diarization/ASR/VAD는 없다
 
 ## 6. Intentional Hold Inventory
 
 | Hold Item | Why It Is Not A Current Live Feature |
 | --- | --- |
-| `voice-tts synthesize` | real GPT-SoVITS integration이 아직 없다 |
-| WAV/audio output | Phase 2의 happy-path deliverable이다 |
-| model weight resolution | placeholder repository만 있고 local metadata contract는 아직 없다 |
+| automatic diarization / VAD / ASR | 현재는 수동 구간 지정 기반의 단일 화자 전제만 지원한다 |
+| richer model catalog metadata | manifest는 최소 contract만 가진다 |
+| GPT-SoVITS v3 support | Phase 2는 v2 단일 버전만 지원한다 |
 | FastAPI/web adapter | local-first 범위를 지키기 위해 의도적으로 제외했다 |
 | Docker/runtime packaging | 현재는 local CLI 개발 루프가 우선이다 |

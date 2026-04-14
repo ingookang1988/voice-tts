@@ -11,8 +11,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     workdir: Path = Path(".local")
     gpt_sovits_root: Path | None = None
-    weights_root: Path | None = None
+    model_manifest: Path = Path(".local/model-profiles.json")
     temp_root: Path = Path(".local/tmp")
+    output_root: Path = Path(".local/outputs")
     default_device: str = "auto"
     use_fp16: bool = True
 
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
             raise ValueError(f"log_level must be one of {sorted(allowed)}")
         return normalized
 
-    @field_validator("gpt_sovits_root", "weights_root", mode="before")
+    @field_validator("gpt_sovits_root", mode="before")
     @classmethod
     def _blank_path_to_none(cls, value: object) -> object:
         if value is None:
@@ -58,4 +59,3 @@ class Settings(BaseSettings):
         if normalized not in allowed:
             raise ValueError(f"default_device must be one of {sorted(allowed)}")
         return normalized
-

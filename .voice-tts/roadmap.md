@@ -3,7 +3,7 @@
 - Role: voice-tts의 장기 phase 전개와 promotion gate 관리
 - Source Type: Roadmap / Goal State
 - Baseline Date: 2026-04-14 (KST)
-- Current Phase: Phase 1 local-first bootstrap closed / Phase 2 core synthesis MVP active-next
+- Current Phase: Phase 2 local synthesis MVP closed / Phase 3 diagnostics and model lifecycle active-next
 - Update Trigger: phase 순서, exit gate, promotion rule이 바뀔 때
 - Excluded Content: 현재 코드 사실, file path evidence, 상세 실행 로그
 
@@ -13,10 +13,10 @@
 
 ## 2. Current Header
 
-- Current sub-phase: **Phase 2 core synthesis MVP preparation**
-- Next sub-phase: **GPT-SoVITS adapter spike + local synthesize command**
-- Next major phase: **Phase 3 model lifecycle and diagnostics**
-- Queued candidate slice: **WeightRepository 구현 + real local audio output happy path**
+- Current sub-phase: **Phase 3 diagnostics and model lifecycle preparation**
+- Next sub-phase: **profile metadata hardening + doctor preflight expansion**
+- Next major phase: **Phase 4 optional service adapters**
+- Queued candidate slice: **reference-audio assist와 runtime observability**
 
 ## 3. Phase Snapshot
 
@@ -24,8 +24,8 @@
 | --- | --- | --- | --- |
 | Phase 0 | Research and documentation harness | 리서치 보고서와 local six-doc stack이 유지된다 | Closed baseline |
 | Phase 1 | Local-first bootstrap and CLI runtime | `uv`, `src/voice_tts`, CLI, doctor, settings, tests가 repo에 landed 되었다 | Closed |
-| Phase 2 | Core local synthesis MVP | real GPT-SoVITS adapter, synthesize command, local audio output은 아직 없다 | Active-next |
-| Phase 3 | Model lifecycle and diagnostics | weight metadata, model selection, richer runtime validation은 아직 없다 | Queued |
+| Phase 2 | Core local synthesis MVP | local synthesize command, model profile manifest, external checkout adapter, WAV output이 들어왔다 | Closed |
+| Phase 3 | Model lifecycle and diagnostics | richer profile metadata, compatibility preflight, richer runtime validation은 아직 없다 | Active-next |
 | Phase 4 | Optional service adapters | FastAPI/web/service adapter는 아직 intentionally absent다 | Queued |
 
 ## 4. Phase Roadmap
@@ -54,33 +54,34 @@
 ### Phase 2: Core Local Synthesis MVP
 
 - Goal: GPT-SoVITS를 실제로 adapter seam에 연결하고 로컬 synthesize happy path를 연다.
+- Current judgment: `voice-tts synthesize`, `JsonModelProfileRepository`, `GptSovitsV2SpeechSynthesisEngine`, auto output policy, opt-in external smoke contract가 들어왔으므로 MVP 목표 범위는 닫혔다.
 - Depends on: Phase 1 closure.
 - Must-have outputs:
   - `SpeechSynthesisEngine`의 real adapter implementation
-  - `WeightRepository`의 local file-backed implementation
+  - manifest-backed `ModelProfileRepository`
   - local `voice-tts synthesize` command
-  - text + speaker/model input -> local audio output happy path
+  - ref audio + prompt + profile input -> local WAV output happy path
 - Exit gate:
-1. local command로 실제 오디오 파일을 생성할 수 있다.
+1. local command로 WAV 파일을 생성할 수 있다.
 2. application은 여전히 GPT-SoVITS 내부 세부사항을 직접 모른다.
-3. missing model/weight/config failure가 deterministic error로 반환된다.
-4. 최소 1개의 happy-path test 또는 smoke가 존재한다.
-- Gate status: Active-next
+3. missing model/config/root failure가 deterministic error로 반환된다.
+4. 기본 smoke와 opt-in external smoke가 존재한다.
+- Gate status: Closed
 
 ### Phase 3: Model Lifecycle and Diagnostics
 
-- Goal: weight selection, model metadata, doctor diagnostics, output metadata를 정리한다.
+- Goal: profile metadata, doctor diagnostics, compatibility validation, output metadata를 정리한다.
 - Depends on: Phase 2 closure.
 - Must-have outputs:
-  - weight metadata contract
-  - model compatibility validation
+  - richer model profile metadata contract
+  - compatibility/version preflight validation
   - richer `doctor` output
   - runtime diagnostics/logging
 - Exit gate:
-1. speaker/model selection이 metadata 기반으로 동작한다.
-2. invalid path/version mismatch를 사전에 검출한다.
+1. profile selection이 richer metadata 기반으로 동작한다.
+2. invalid path/version mismatch를 사전에 더 넓게 검출한다.
 3. bootstrap/diagnostic output이 local troubleshooting에 충분하다.
-- Gate status: Queued
+- Gate status: Active-next
 
 ### Phase 4: Optional Service Adapters
 
@@ -96,6 +97,6 @@
 ## 5. Promotion Rules
 
 1. phase 승격은 일정이 아니라 exit gate 증거로 결정한다.
-2. local CLI가 있어도 real synthesis가 없으면 Phase 2는 닫히지 않는다.
-3. web adapter는 로컬 코어가 흔들리는 상태에서 먼저 열지 않는다.
+2. synthesize command가 있어도 deterministic failure와 basic smoke가 없으면 Phase 2는 닫히지 않는다.
+3. web adapter는 로컬 코어와 diagnostics가 흔들리는 상태에서 먼저 열지 않는다.
 4. 문서와 runtime truth가 어긋나면 phase를 낮추기보다 `mechanism.md`와 `sprint.md`에 drift를 남긴다.
