@@ -68,6 +68,7 @@ def test_engine_generates_wav_with_fake_gpt_sovits_checkout(tmp_path: Path) -> N
     )
     profile = ModelProfile(
         id="gsv2-default",
+        display_name="Korean Zero-Shot",
         version="gpt-sovits-v2",
         tts_config_path=config_path,
     )
@@ -89,3 +90,13 @@ def test_engine_generates_wav_with_fake_gpt_sovits_checkout(tmp_path: Path) -> N
     audio_data, sample_rate = sf.read(str(output_path))
     assert sample_rate == 24000
     assert len(audio_data) == 2400
+    assert result.metadata["engine"] == "gpt-sovits-v2"
+    assert result.metadata["model_profile_id"] == "gsv2-default"
+    assert result.metadata["profile_display_name"] == "Korean Zero-Shot"
+    assert result.metadata["resolved_tts_config_path"] == str(config_path)
+    assert result.metadata["input_ref_audio_path"] == str(ref_audio)
+    assert result.metadata["resolved_ref_audio_path"] == str(ref_audio)
+    assert result.metadata["trim_applied"] == "false"
+    assert result.metadata["device"] == "cpu"
+    assert result.metadata["use_fp16"] == "false"
+    assert int(result.metadata["elapsed_ms"]) >= 0

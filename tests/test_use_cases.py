@@ -43,6 +43,7 @@ def _make_profile(tmp_path: Path) -> ModelProfile:
     config_path.write_text("custom: {}\n", encoding="utf-8")
     return ModelProfile(
         id="gsv2-default",
+        display_name="Korean Zero-Shot",
         version="gpt-sovits-v2",
         tts_config_path=config_path,
     )
@@ -87,7 +88,7 @@ def test_command_rejects_existing_output_without_force(tmp_path: Path) -> None:
     existing_output.write_bytes(b"stub")
     command = _make_command(tmp_path, output_path=existing_output)
 
-    with pytest.raises(VoiceTtsUsageError):
+    with pytest.raises(VoiceTtsUsageError, match="\\[preflight\\] output file already exists"):
         command.resolve_output_path(tmp_path / "outputs")
 
 
@@ -101,5 +102,5 @@ def test_command_allows_existing_output_with_force(tmp_path: Path) -> None:
 
 
 def test_command_rejects_invalid_trim_range(tmp_path: Path) -> None:
-    with pytest.raises(VoiceTtsUsageError):
+    with pytest.raises(VoiceTtsUsageError, match="\\[preflight\\] ref_end_sec must be greater than ref_start_sec"):
         _make_command(tmp_path, ref_start_sec=3.0, ref_end_sec=2.0)

@@ -3,7 +3,7 @@
 - Role: voice-tts의 장기 phase 전개와 promotion gate 관리
 - Source Type: Roadmap / Goal State
 - Baseline Date: 2026-04-14 (KST)
-- Current Phase: Phase 2 local synthesis MVP closed / Phase 3 diagnostics and model lifecycle active-next
+- Current Phase: Phase 3 diagnostics and model lifecycle closed / Phase 4 reference-audio assist + optional service adapter evaluation active-next
 - Update Trigger: phase 순서, exit gate, promotion rule이 바뀔 때
 - Excluded Content: 현재 코드 사실, file path evidence, 상세 실행 로그
 
@@ -13,10 +13,10 @@
 
 ## 2. Current Header
 
-- Current sub-phase: **Phase 3 diagnostics and model lifecycle preparation**
-- Next sub-phase: **profile metadata hardening + doctor preflight expansion**
-- Next major phase: **Phase 4 optional service adapters**
-- Queued candidate slice: **reference-audio assist와 runtime observability**
+- Current sub-phase: **Phase 4 planning for reference-audio assist + optional service adapter evaluation**
+- Next sub-phase: **reference clip assist scope definition**
+- Next major phase: **optional service adapter decision**
+- Queued candidate slice: **profile browsing UX와 richer runtime observability**
 
 ## 3. Phase Snapshot
 
@@ -25,8 +25,8 @@
 | Phase 0 | Research and documentation harness | 리서치 보고서와 local six-doc stack이 유지된다 | Closed baseline |
 | Phase 1 | Local-first bootstrap and CLI runtime | `uv`, `src/voice_tts`, CLI, doctor, settings, tests가 repo에 landed 되었다 | Closed |
 | Phase 2 | Core local synthesis MVP | local synthesize command, model profile manifest, external checkout adapter, WAV output이 들어왔다 | Closed |
-| Phase 3 | Model lifecycle and diagnostics | richer profile metadata, compatibility preflight, richer runtime validation은 아직 없다 | Active-next |
-| Phase 4 | Optional service adapters | FastAPI/web/service adapter는 아직 intentionally absent다 | Queued |
+| Phase 3 | Model lifecycle and diagnostics | typed metadata, compatibility preflight, richer doctor output, runtime diagnostics가 들어왔다 | Closed |
+| Phase 4 | Reference-audio assist and optional service adapters | higher-level ref audio assist와 service adapter 여부 판단은 아직 없다 | Active-next |
 
 ## 4. Phase Roadmap
 
@@ -81,22 +81,22 @@
 1. profile selection이 richer metadata 기반으로 동작한다.
 2. invalid path/version mismatch를 사전에 더 넓게 검출한다.
 3. bootstrap/diagnostic output이 local troubleshooting에 충분하다.
-- Gate status: Active-next
+- Gate status: Closed
 
-### Phase 4: Optional Service Adapters
+### Phase 4: Reference-Audio Assist and Optional Service Adapters
 
-- Goal: 필요 시 FastAPI 또는 다른 service adapter를 붙인다.
-- Depends on: Phase 2 or 3 closure.
-- Repo Status: 현재 repo에는 intentionally no web/API surface 상태다.
+- Goal: manual trim만으로 부족한 reference audio prep를 보완하고, local core 위에 optional service adapter가 필요한지 판단한다.
+- Depends on: Phase 3 closure.
+- Repo Status: 현재 repo에는 intentionally no web/API surface 상태이며, local CLI가 canonical debug path다.
 - Exit gate:
-1. local core가 service adapter 뒤에서도 같은 seam을 유지한다.
-2. adapter 추가가 domain/application canon을 깨지 않는다.
-3. local-first command path는 계속 canonical debug path로 유지된다.
-- Gate status: Queued
+1. reference-audio assist 범위가 local-first canon을 깨지 않도록 정의된다.
+2. optional service adapter 도입 여부가 domain/application seam 기준으로 평가된다.
+3. local CLI path는 계속 canonical debug path로 유지된다.
+- Gate status: Active-next
 
 ## 5. Promotion Rules
 
 1. phase 승격은 일정이 아니라 exit gate 증거로 결정한다.
-2. synthesize command가 있어도 deterministic failure와 basic smoke가 없으면 Phase 2는 닫히지 않는다.
-3. web adapter는 로컬 코어와 diagnostics가 흔들리는 상태에서 먼저 열지 않는다.
+2. diagnostics가 profile-aware 하더라도 reference prep UX가 수동이면 assist phase는 아직 닫히지 않는다.
+3. web adapter는 local core와 diagnostics가 흔들리는 상태에서 먼저 열지 않는다.
 4. 문서와 runtime truth가 어긋나면 phase를 낮추기보다 `mechanism.md`와 `sprint.md`에 drift를 남긴다.

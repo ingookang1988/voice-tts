@@ -2,8 +2,16 @@
   "profiles": [
     {
       "id": "gsv2-default",
+      "display_name": "Korean Zero-Shot",
       "version": "gpt-sovits-v2",
-      "tts_config_path": "D:/GPT-SoVITS/GPT_SoVITS/configs/tts_infer.yaml"
+      "tts_config_path": "D:/GPT-SoVITS/GPT_SoVITS/configs/tts_infer.yaml",
+      "languages": ["ko", "en"],
+      "speaker_tags": ["female", "studio"],
+      "notes": "Reference profile for zero-shot local synthesis on a GPT-SoVITS v2 checkout.",
+      "compatibility": {
+        "required_checkout_files": ["GPT_SoVITS/TTS_infer_pack/TTS.py"],
+        "supported_devices": ["auto", "cpu", "cuda"]
+      }
     }
   ]
 }

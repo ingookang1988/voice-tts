@@ -100,8 +100,7 @@ def synthesize(
         typer.secho(str(exc), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
 
-    typer.secho(f"generated wav: {result.audio_path}", fg=typer.colors.GREEN)
-    typer.echo(f"sample_rate: {result.sample_rate}")
+    _print_synthesis_result(result)
 
 
 def _print_doctor_report(report: DoctorReport) -> None:
@@ -126,3 +125,21 @@ def _print_doctor_report(report: DoctorReport) -> None:
         else f"doctor failed: {report.pass_count} pass, {report.warn_count} warn, {report.fail_count} fail"
     )
     typer.secho(summary, fg=typer.colors.GREEN if report.ok else typer.colors.RED)
+
+
+def _print_synthesis_result(result) -> None:
+    typer.secho(f"generated wav: {result.audio_path}", fg=typer.colors.GREEN)
+    typer.echo(f"sample_rate: {result.sample_rate}")
+
+    profile_label = result.metadata.get(
+        "profile_display_name",
+        result.metadata.get("model_profile_id", "(unknown)"),
+    )
+    profile_id = result.metadata.get("model_profile_id", "(unknown)")
+    typer.echo(f"profile: {profile_id} ({profile_label})")
+    typer.echo("config_path: " + result.metadata.get("resolved_tts_config_path", "(unknown)"))
+    typer.echo("resolved_ref_audio: " + result.metadata.get("resolved_ref_audio_path", "(unknown)"))
+    typer.echo("trim_applied: " + result.metadata.get("trim_applied", "(unknown)"))
+    typer.echo("elapsed_ms: " + result.metadata.get("elapsed_ms", "(unknown)"))
+    typer.echo("device: " + result.metadata.get("device", "(unknown)"))
+    typer.echo("use_fp16: " + result.metadata.get("use_fp16", "(unknown)"))

@@ -1,18 +1,19 @@
 # voice-tts
 
-`voice-tts` is a local-first GPT-SoVITS toolkit for Windows-focused voice TTS work.
+`voice-tts` is a local-first GPT-SoVITS toolkit for Windows-oriented TTS work.
 
-Phase 2 is now landed. The repo provides:
+Phase 3 is now landed. The repo provides:
 
 - a `uv`-managed Python project
 - a `src/voice_tts` package with Clean Architecture seams
-- manifest-backed model profile resolution
+- a typed model profile catalog with Hybrid Warn manifest normalization
 - a local CLI with `version`, `doctor`, and `synthesize`
 - a GPT-SoVITS v2 adapter that imports an external checkout
 - zero-shot reference-audio synthesis with optional manual trim
-- tests for settings, CLI, repositories, architecture, and adapter smoke
+- richer diagnostics for profile compatibility and synthesis output
+- tests for settings, CLI, repositories, use cases, architecture, and adapter smoke
 
-This project is still local-first. It does **not** include FastAPI, Docker, automatic diarization, automatic ASR, automatic VAD, or GPT-SoVITS v3 support.
+This project is still local-first. It does **not** include FastAPI, Docker, automatic diarization, automatic ASR, automatic VAD, reference-audio assist automation, or GPT-SoVITS v3 support.
 
 ## Requirements
 
@@ -46,12 +47,22 @@ Create a manifest based on [`config/model-profiles.example.json`](config/model-p
   "profiles": [
     {
       "id": "gsv2-default",
+      "display_name": "Korean Zero-Shot",
       "version": "gpt-sovits-v2",
-      "tts_config_path": "D:/GPT-SoVITS/GPT_SoVITS/configs/tts_infer.yaml"
+      "tts_config_path": "D:/GPT-SoVITS/GPT_SoVITS/configs/tts_infer.yaml",
+      "languages": ["ko", "en"],
+      "speaker_tags": ["female", "studio"],
+      "notes": "Reference profile for zero-shot local synthesis on a GPT-SoVITS v2 checkout.",
+      "compatibility": {
+        "required_checkout_files": ["GPT_SoVITS/TTS_infer_pack/TTS.py"],
+        "supported_devices": ["auto", "cpu", "cuda"]
+      }
     }
   ]
 }
 ```
+
+Legacy Phase 2 manifests still load, but `voice-tts doctor` will mark them with `WARN` because default metadata had to be filled in.
 
 Then check the local runtime:
 
@@ -68,7 +79,7 @@ Prints the installed project version.
 
 ### `voice-tts doctor`
 
-Runs a Phase 2 self-check:
+Runs a Phase 3 compatibility preflight:
 
 - settings load
 - Python version policy
@@ -76,11 +87,16 @@ Runs a Phase 2 self-check:
 - required GPT-SoVITS root status
 - `ffmpeg` availability
 - model manifest parse and profile count
+- profile metadata completeness
+- config path existence and YAML shape
+- required checkout files under `VOICE_TTS_GPT_SOVITS_ROOT`
+- default device compatibility
+- shallow upstream import of `GPT_SoVITS.TTS_infer_pack.TTS`
 
 `doctor` exits with:
 
-- `0` when the Phase 2 runtime is healthy
-- `1` when there is a blocking configuration problem
+- `0` when the runtime is healthy or only has warnings
+- `1` when there is a blocking compatibility problem
 
 ### `voice-tts synthesize`
 
@@ -105,6 +121,27 @@ Rules:
 - output is always WAV
 - if `--output` is omitted, the file is written under `.local/outputs/<model-profile>/...wav`
 - if `--output` already exists, pass `--force` to overwrite it
+
+Success output always includes:
+
+- generated wav path
+- sample rate
+- resolved profile id and display name
+- resolved config path
+- resolved reference audio path
+- trim applied 여부
+- elapsed time
+- selected device
+- fp16 usage
+
+Deterministic failures use stage prefixes:
+
+- `[manifest]`
+- `[preflight]`
+- `[import]`
+- `[trim]`
+- `[synthesis]`
+- `[output]`
 
 ## Tests
 
@@ -134,11 +171,10 @@ tests/
 .voice-tts/
 ```
 
-## Phase 3 Preview
+## Next Focus
 
-Phase 3 focuses on:
+Phase 4 planning is now centered on:
 
-- richer model lifecycle metadata
-- stronger diagnostics and troubleshooting output
-- improved runtime validation
-- optional higher-level automation around reference-audio preparation
+- reference-audio assist beyond manual trim
+- optional service adapter evaluation
+- keeping the local CLI path as the canonical debugging surface

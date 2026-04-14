@@ -1,6 +1,23 @@
 from __future__ import annotations
 
 
+VOICE_TTS_ERROR_STAGES = {
+    "manifest",
+    "preflight",
+    "import",
+    "trim",
+    "synthesis",
+    "output",
+}
+
+
+def with_stage(stage: str, detail: str) -> str:
+    normalized_stage = stage.strip().lower()
+    if normalized_stage not in VOICE_TTS_ERROR_STAGES:
+        raise ValueError(f"unsupported voice-tts error stage: {stage}")
+    return f"[{normalized_stage}] {detail}"
+
+
 class VoiceTtsError(Exception):
     """Base exception for deterministic voice-tts failures."""
 
