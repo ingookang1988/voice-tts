@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import subprocess
 import time
 from pathlib import Path
 from uuid import uuid4
@@ -22,7 +21,7 @@ from voice_tts.exceptions import (
     with_stage,
 )
 from voice_tts.infrastructure.gpt_sovits import shallow_import_tts_module
-from voice_tts.infrastructure.system import find_ffmpeg_executable
+from voice_tts.infrastructure.reference_audio import export_audio_clip
 
 
 class GptSovitsV2SpeechSynthesisEngine:
@@ -147,49 +146,16 @@ class GptSovitsV2SpeechSynthesisEngine:
         if request.ref_start_sec is None and request.ref_end_sec is None:
             return request.ref_audio_path
 
-        ffmpeg = find_ffmpeg_executable()
-        if ffmpeg is None:
-            raise VoiceTtsDependencyError(
-                with_stage("trim", "ffmpeg was not found on PATH; install ffmpeg before using synthesize")
-            )
-
         trim_root = self.temp_root / "ref-trims"
-        trim_root.mkdir(parents=True, exist_ok=True)
         trimmed_audio_path = trim_root / f"{uuid4().hex}.wav"
 
         start_sec = request.ref_start_sec or 0.0
-        command = [
-            str(ffmpeg),
-            "-y",
-            "-i",
-            str(request.ref_audio_path),
-            "-ss",
-            f"{start_sec:.3f}",
-        ]
-        if request.ref_end_sec is not None:
-            duration = request.ref_end_sec - start_sec
-            command.extend(["-t", f"{duration:.3f}"])
-        command.extend(
-            [
-                "-vn",
-                "-acodec",
-                "pcm_s16le",
-                str(trimmed_audio_path),
-            ]
+        return export_audio_clip(
+            input_path=request.ref_audio_path,
+            output_path=trimmed_audio_path,
+            start_sec=start_sec,
+            end_sec=request.ref_end_sec,
         )
-
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if completed.returncode != 0:
-            detail = completed.stderr.strip() or completed.stdout.strip() or "unknown ffmpeg error"
-            raise VoiceTtsSynthesisError(
-                with_stage("trim", f"ffmpeg failed to trim reference audio: {detail}")
-            )
-        return trimmed_audio_path
 
     def _run_pipeline(self, pipeline, request: SynthesisRequest, ref_audio_path: Path):
         payload = {

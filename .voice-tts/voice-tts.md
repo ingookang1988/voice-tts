@@ -3,13 +3,13 @@
 - Role: `.voice-tts/` 문서 체계의 최상위 진입점
 - Source Type: Control Tower / Canonical Entry
 - Baseline Date: 2026-04-14 (KST)
-- Current Phase: Phase 3 diagnostics and model lifecycle closed / next focus reference-audio assist + optional service adapter evaluation
+- Current Phase: Phase 4a reference-audio assist landed / next focus optional service adapter evaluation
 - Update Trigger: 상위 기준선, active focus, 문서 소유권, phase 요약이 바뀔 때
 - Excluded Content: 상세 구현 로그, 장기 설계 해설, 세부 WO 이력
 
 ## 1. Purpose
 
-이 문서는 `voice-tts` 프로젝트 문서 체계의 control tower다. 현재 기준선은 **local-first CLI 위에서 GPT-SoVITS v2 zero-shot synthesis와 profile-aware diagnostics가 함께 열려 있는 상태**다.
+이 문서는 `voice-tts` 프로젝트 문서 체계의 control tower다. 현재 기준선은 **local-first CLI 위에서 GPT-SoVITS v2 zero-shot synthesis, profile-aware diagnostics, first-run setup, reference-audio assist가 함께 열려 있는 상태**다.
 
 문서 체계의 소유권은 아래와 같다.
 
@@ -26,13 +26,13 @@
 
 | Item | Current Baseline |
 | --- | --- |
-| Product Identity | 이 저장소는 **로컬 전용 GPT-SoVITS TTS toolkit**이다. 현재는 CLI에서 실제 zero-shot WAV 합성과 compatibility preflight를 수행할 수 있다. |
+| Product Identity | 이 저장소는 **로컬 전용 GPT-SoVITS TTS toolkit**이다. 현재는 CLI에서 first-run setup, profile discovery, reference clip prep, 실제 zero-shot WAV 합성, compatibility preflight를 수행할 수 있다. |
 | Canonical Doc Root | `.voice-tts/` |
 | Current Live Product Map | 현재 live 상태의 개발자-facing feature owner는 `.voice-tts/feature.md`다. |
-| Current Focus | 현재 기준선은 **Phase 3 closed** 상태다. typed model profile metadata, Hybrid Warn manifest policy, profile-aware doctor, richer synthesis diagnostics가 landed 되었다. |
-| Architecture Program | `topology.md`는 local-first package canon과 Clean Architecture + DDD + port/adapter 원칙을, `mechanism.md`는 실제 파일/명령/테스트 사실을, `sprint.md`는 reference-audio assist와 optional service adapter evaluation 후속 작업을 소유한다. |
-| Implemented Highlights | `voice-tts version`, `voice-tts doctor`, `voice-tts synthesize`, typed `ModelProfile`/`ModelCompatibility`, Hybrid Warn manifest normalization, shallow import preflight, stage-prefixed deterministic error handling |
-| Open Follow-up | reference-audio assist, richer profile browsing UX, optional web/API adapter evaluation, GPT-SoVITS v3 여부 판단 |
+| Current Focus | 현재 기준선은 **Phase 4a landed** 상태다. `init`, `profiles`, `prepare-ref`, typed model profile metadata, Hybrid Warn manifest policy, profile-aware doctor, richer synthesis diagnostics가 landed 되었다. |
+| Architecture Program | `topology.md`는 local-first package canon과 Clean Architecture + DDD + port/adapter 원칙을, `mechanism.md`는 실제 파일/명령/테스트 사실을, `sprint.md`는 optional service adapter evaluation과 후속 polishing을 소유한다. |
+| Implemented Highlights | `voice-tts version`, `voice-tts init`, `voice-tts doctor`, `voice-tts profiles`, `voice-tts prepare-ref`, `voice-tts synthesize`, typed `ModelProfile`/`ModelCompatibility`, Hybrid Warn manifest normalization, shallow import preflight, stage-prefixed deterministic error handling |
+| Open Follow-up | optional web/API adapter evaluation, richer runtime observability, GPT-SoVITS v3 여부 판단 |
 
 ## 3. Phase Snapshot
 
@@ -42,7 +42,8 @@
 | Phase 1 Local-first Bootstrap | Closed | `uv` project, `src/voice_tts`, CLI, doctor, settings, tests가 들어왔다. |
 | Phase 2 Core Synthesis MVP | Closed | local synthesize command, manifest-backed profile resolution, external GPT-SoVITS adapter, WAV output path가 landed 되었다. |
 | Phase 3 Model Lifecycle and Diagnostics | Closed | typed metadata, compatibility preflight, richer runtime diagnostics가 들어왔다. |
-| Phase 4 Reference-Audio Assist and Optional Service Adapter Evaluation | Active-next | local CLI를 유지한 채 higher-level assist와 service adapter 여부를 판단하는 단계다. |
+| Phase 4a Reference-Audio Assist and Local CLI UX | Closed | `init`, `profiles`, `prepare-ref`가 추가되어 first-run CLI flow가 이어진다. |
+| Phase 4b Optional Service Adapter Evaluation | Active-next | local CLI를 유지한 채 service adapter 필요성을 판단하는 단계다. |
 
 ## 4. Canonical Six-Doc Stack
 
@@ -60,7 +61,6 @@
 | Drift | Current Evidence | Impact | Tracking |
 | --- | --- | --- | --- |
 | external GPT-SoVITS checkout은 여전히 repo 밖 자산이다 | `VOICE_TTS_GPT_SOVITS_ROOT`와 manifest가 필요하다 | local asset setup 없이는 `doctor`와 `synthesize`가 fail한다 | `mechanism.md`, `sprint.md` |
-| reference-audio prep는 아직 수동 trim 기반이다 | `--ref-start-sec`, `--ref-end-sec`만 제공된다 | multi-speaker cleanup와 assist UX는 다음 단계 과제다 | `feature.md`, `roadmap.md` |
 | web/API surface는 아직 intentionally absent다 | FastAPI/router가 없다 | local CLI는 단단하지만 remote/service integration은 아직 논외다 | `topology.md`, `roadmap.md` |
 
 ## 6. Reading Order

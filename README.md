@@ -2,18 +2,20 @@
 
 `voice-tts` is a local-first GPT-SoVITS toolkit for Windows-oriented TTS work.
 
-Phase 3 is now landed. The repo provides:
+Phase 4a is now landed. The repo provides:
 
 - a `uv`-managed Python project
 - a `src/voice_tts` package with Clean Architecture seams
 - a typed model profile catalog with Hybrid Warn manifest normalization
-- a local CLI with `version`, `doctor`, and `synthesize`
+- a local CLI with `version`, `init`, `doctor`, `profiles`, `prepare-ref`, and `synthesize`
+- first-run workspace scaffolding for `.env` and a seeded manifest
 - a GPT-SoVITS v2 adapter that imports an external checkout
+- silence-based reference-audio inspection, ranking, and WAV export
 - zero-shot reference-audio synthesis with optional manual trim
 - richer diagnostics for profile compatibility and synthesis output
-- tests for settings, CLI, repositories, use cases, architecture, and adapter smoke
+- tests for settings, CLI, repositories, use cases, workspace scaffolding, reference-audio parsing, architecture, and adapter smoke
 
-This project is still local-first. It does **not** include FastAPI, Docker, automatic diarization, automatic ASR, automatic VAD, reference-audio assist automation, or GPT-SoVITS v3 support.
+This project is still local-first. It does **not** include FastAPI, Docker, automatic diarization, automatic ASR, automatic VAD, or GPT-SoVITS v3 support.
 
 ## Requirements
 
@@ -29,46 +31,40 @@ This project is still local-first. It does **not** include FastAPI, Docker, auto
 
 ```powershell
 uv sync --python 3.10
-Copy-Item .env.example .env
+uv run voice-tts init --gpt-sovits-root D:\GPT-SoVITS
 ```
 
-Set at least these values in `.env`:
+`init` creates:
 
-```dotenv
-VOICE_TTS_GPT_SOVITS_ROOT=D:/GPT-SoVITS
-VOICE_TTS_MODEL_MANIFEST=.local/model-profiles.json
-VOICE_TTS_OUTPUT_ROOT=.local/outputs
-```
+- `.env` from `.env.example`
+- `.local/model-profiles.json` with a seeded `gsv2-default` profile
+- `.local/tmp` and `.local/outputs`
 
-Create a manifest based on [`config/model-profiles.example.json`](config/model-profiles.example.json):
-
-```json
-{
-  "profiles": [
-    {
-      "id": "gsv2-default",
-      "display_name": "Korean Zero-Shot",
-      "version": "gpt-sovits-v2",
-      "tts_config_path": "D:/GPT-SoVITS/GPT_SoVITS/configs/tts_infer.yaml",
-      "languages": ["ko", "en"],
-      "speaker_tags": ["female", "studio"],
-      "notes": "Reference profile for zero-shot local synthesis on a GPT-SoVITS v2 checkout.",
-      "compatibility": {
-        "required_checkout_files": ["GPT_SoVITS/TTS_infer_pack/TTS.py"],
-        "supported_devices": ["auto", "cpu", "cuda"]
-      }
-    }
-  ]
-}
-```
-
-Legacy Phase 2 manifests still load, but `voice-tts doctor` will mark them with `WARN` because default metadata had to be filled in.
-
-Then check the local runtime:
+Then check the local runtime and discover the seeded profile:
 
 ```powershell
 uv run voice-tts version
 uv run voice-tts doctor
+uv run voice-tts profiles
+```
+
+Prepare a reference clip:
+
+```powershell
+uv run voice-tts prepare-ref --input D:\clips\session.wav
+uv run voice-tts prepare-ref --input D:\clips\session.wav --pick 1
+```
+
+Then synthesize:
+
+```powershell
+uv run voice-tts synthesize `
+  --model-profile gsv2-default `
+  --text "안녕하세요" `
+  --text-lang ko `
+  --ref-audio .local\tmp\ref-clips\session-0p500-6p200.wav `
+  --prompt-text "안녕하세요, 반갑습니다." `
+  --prompt-lang ko
 ```
 
 ## CLI
@@ -77,9 +73,20 @@ uv run voice-tts doctor
 
 Prints the installed project version.
 
+### `voice-tts init`
+
+Scaffolds `.env`, a seeded manifest, and the default local temp/output directories.
+
+Rules:
+
+- `--gpt-sovits-root` is required
+- `--manifest` defaults to `.local/model-profiles.json`
+- `--output-root` defaults to `.local/outputs`
+- if `.env` or the target manifest already exists, pass `--force` to overwrite it
+
 ### `voice-tts doctor`
 
-Runs a Phase 3 compatibility preflight:
+Runs a compatibility preflight:
 
 - settings load
 - Python version policy
@@ -97,6 +104,36 @@ Runs a Phase 3 compatibility preflight:
 
 - `0` when the runtime is healthy or only has warnings
 - `1` when there is a blocking compatibility problem
+
+### `voice-tts profiles`
+
+Prints manifest-backed profile metadata for discovery:
+
+- profile id and display name
+- languages
+- speaker tags
+- supported devices
+- config path status
+- manifest normalization warnings
+
+### `voice-tts prepare-ref`
+
+Inspects source audio, prints metadata, ranks up to 3 candidate speech clips, and can export one as WAV.
+
+```powershell
+uv run voice-tts prepare-ref --input D:\clips\session.wav
+uv run voice-tts prepare-ref --input D:\clips\session.wav --pick 1
+uv run voice-tts prepare-ref --input D:\clips\session.wav --start-sec 1.2 --end-sec 6.8
+```
+
+Rules:
+
+- source metadata always includes duration, sample rate, channels, format, and container
+- if no explicit range is provided, silence-based analysis ranks up to 3 candidates
+- `--pick` chooses a ranked candidate and exports it to WAV
+- `--start-sec` and `--end-sec` export that exact range and cannot be combined with `--pick`
+- default export path is `.local/tmp/ref-clips/<source-stem>-<start>-<end>.wav`
+- if the output file already exists, pass `--force` to overwrite it
 
 ### `voice-tts synthesize`
 
@@ -173,8 +210,8 @@ tests/
 
 ## Next Focus
 
-Phase 4 planning is now centered on:
+Phase 4b planning is now centered on:
 
-- reference-audio assist beyond manual trim
 - optional service adapter evaluation
+- richer runtime observability
 - keeping the local CLI path as the canonical debugging surface

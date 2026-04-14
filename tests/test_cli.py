@@ -7,8 +7,13 @@ from types import SimpleNamespace
 
 from typer.testing import CliRunner
 
-from voice_tts.application.dto import SynthesizeSpeechResultDto
+from voice_tts.application.dto import (
+    PrepareReferenceAudioResultDto,
+    ReferenceClipCandidateDto,
+    SynthesizeSpeechResultDto,
+)
 from voice_tts.cli import app
+from voice_tts.domain.entities import ModelProfile
 from voice_tts.exceptions import ModelProfileNotFoundError
 
 
@@ -110,10 +115,86 @@ class _FakeUseCase:
         return self.result
 
 
+class _FakePrepareReferenceUseCase:
+    def __init__(
+        self,
+        result: PrepareReferenceAudioResultDto | None = None,
+        error: Exception | None = None,
+    ) -> None:
+        self.result = result or PrepareReferenceAudioResultDto(
+            source_path="D:/clips/source.wav",
+            duration_sec=12.5,
+            sample_rate=48000,
+            channels=1,
+            format_name="pcm_s16le",
+            container_name="wav",
+            candidates=(),
+            exported_clip_path=None,
+            selected_candidate=None,
+        )
+        self.error = error
+        self.commands = []
+
+    def execute(self, command):
+        self.commands.append(command)
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
 def test_version_command_prints_project_version() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "voice-tts 0.3.0" in result.stdout
+    assert "voice-tts 0.4.0" in result.stdout
+
+
+def test_init_creates_env_and_seed_manifest(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env.example").write_text(
+        "\n".join(
+            [
+                "VOICE_TTS_ENV=local",
+                "VOICE_TTS_LOG_LEVEL=INFO",
+                "VOICE_TTS_WORKDIR=.local",
+                "VOICE_TTS_GPT_SOVITS_ROOT=",
+                "VOICE_TTS_MODEL_MANIFEST=.local/model-profiles.json",
+                "VOICE_TTS_TEMP_ROOT=.local/tmp",
+                "VOICE_TTS_OUTPUT_ROOT=.local/outputs",
+                "VOICE_TTS_DEFAULT_DEVICE=auto",
+                "VOICE_TTS_USE_FP16=true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    gpt_root = tmp_path / "fake-gpt"
+    gpt_root.mkdir()
+
+    result = runner.invoke(app, ["init", "--gpt-sovits-root", str(gpt_root)])
+
+    assert result.exit_code == 0
+    assert "voice-tts init" in result.stdout
+    assert "seeded_profile: gsv2-default" in result.stdout
+    assert (tmp_path / ".env").exists()
+    manifest_path = tmp_path / ".local" / "model-profiles.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert payload["profiles"][0]["id"] == "gsv2-default"
+    assert payload["profiles"][0]["tts_config_path"] == str(
+        (gpt_root / "GPT_SoVITS" / "configs" / "tts_infer.yaml").resolve()
+    )
+
+
+def test_init_fails_without_force_when_env_exists(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env.example").write_text("VOICE_TTS_GPT_SOVITS_ROOT=\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("VOICE_TTS_ENV=local\n", encoding="utf-8")
+    gpt_root = tmp_path / "fake-gpt"
+    gpt_root.mkdir()
+
+    result = runner.invoke(app, ["init", "--gpt-sovits-root", str(gpt_root)])
+
+    assert result.exit_code == 1
+    assert ".env already exists; pass --force to overwrite" in _combined_output(result)
 
 
 def test_doctor_passes_with_valid_phase3_configuration(monkeypatch, tmp_path: Path) -> None:
@@ -284,6 +365,103 @@ def test_doctor_fails_when_upstream_import_breaks(monkeypatch, tmp_path: Path) -
     assert result.exit_code == 1
     assert "[FAIL] profile:gsv2-default" in result.stdout
     assert "upstream import failed:" in result.stdout
+
+
+def test_profiles_prints_profile_discovery_details(monkeypatch, tmp_path: Path) -> None:
+    config_path = tmp_path / "tts_infer.yaml"
+    config_path.write_text("custom: {}\n", encoding="utf-8")
+    profile = ModelProfile(
+        id="gsv2-default",
+        display_name="Korean Zero-Shot",
+        version="gpt-sovits-v2",
+        tts_config_path=config_path,
+        languages=("ko", "en"),
+        speaker_tags=("female", "studio"),
+        normalization_warnings=("legacy defaults applied for notes",),
+    )
+    fake_repository = SimpleNamespace(list_profiles=lambda: (profile,))
+    monkeypatch.setattr(
+        "voice_tts.cli.build_container",
+        lambda: SimpleNamespace(model_profile_repository=fake_repository),
+    )
+
+    result = runner.invoke(app, ["profiles"])
+
+    assert result.exit_code == 0
+    assert "voice-tts profiles" in result.stdout
+    assert "- gsv2-default: Korean Zero-Shot" in result.stdout
+    assert "languages: ko, en" in result.stdout
+    assert "speaker_tags: female, studio" in result.stdout
+    assert "supported_devices: auto, cpu, cuda" in result.stdout
+    assert f"config_path: {config_path} (present)" in result.stdout
+    assert "legacy defaults applied for notes" in result.stdout
+
+
+def test_prepare_ref_prints_ranked_candidates(monkeypatch, tmp_path: Path) -> None:
+    fake_use_case = _FakePrepareReferenceUseCase(
+        result=PrepareReferenceAudioResultDto(
+            source_path=str(tmp_path / "source.wav"),
+            duration_sec=18.2,
+            sample_rate=44100,
+            channels=1,
+            format_name="pcm_s16le",
+            container_name="wav",
+            candidates=(
+                ReferenceClipCandidateDto(index=1, start_sec=0.5, end_sec=6.2, duration_sec=5.7),
+                ReferenceClipCandidateDto(index=2, start_sec=7.0, end_sec=13.1, duration_sec=6.1),
+            ),
+            exported_clip_path=None,
+            selected_candidate=None,
+        )
+    )
+    monkeypatch.setattr(
+        "voice_tts.cli.build_container",
+        lambda: SimpleNamespace(prepare_reference_audio=fake_use_case),
+    )
+    source_audio = tmp_path / "source.wav"
+    source_audio.write_bytes(b"RIFF")
+
+    result = runner.invoke(app, ["prepare-ref", "--input", str(source_audio)])
+
+    assert result.exit_code == 0
+    assert "voice-tts prepare-ref" in result.stdout
+    assert "duration_sec: 18.200" in result.stdout
+    assert "candidate_segments:" in result.stdout
+    assert "1. 0.500 -> 6.200 (5.700s)" in result.stdout
+    assert fake_use_case.commands[0].input_path == source_audio
+
+
+def test_prepare_ref_prints_exported_clip(monkeypatch, tmp_path: Path) -> None:
+    fake_use_case = _FakePrepareReferenceUseCase(
+        result=PrepareReferenceAudioResultDto(
+            source_path=str(tmp_path / "source.wav"),
+            duration_sec=10.0,
+            sample_rate=48000,
+            channels=2,
+            format_name="pcm_s16le",
+            container_name="wav",
+            candidates=(
+                ReferenceClipCandidateDto(index=1, start_sec=1.0, end_sec=7.0, duration_sec=6.0),
+            ),
+            exported_clip_path=str(tmp_path / "prepared.wav"),
+            selected_candidate=ReferenceClipCandidateDto(index=1, start_sec=1.0, end_sec=7.0, duration_sec=6.0),
+        )
+    )
+    monkeypatch.setattr(
+        "voice_tts.cli.build_container",
+        lambda: SimpleNamespace(prepare_reference_audio=fake_use_case),
+    )
+    source_audio = tmp_path / "source.wav"
+    source_audio.write_bytes(b"RIFF")
+
+    result = runner.invoke(
+        app,
+        ["prepare-ref", "--input", str(source_audio), "--pick", "1"],
+    )
+
+    assert result.exit_code == 0
+    assert f"prepared_ref_audio: {tmp_path / 'prepared.wav'}" in result.stdout
+    assert "selected_range: 1.000 -> 7.000 (6.000s)" in result.stdout
 
 
 def test_synthesize_requires_named_flags() -> None:

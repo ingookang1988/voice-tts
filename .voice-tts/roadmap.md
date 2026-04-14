@@ -3,7 +3,7 @@
 - Role: voice-tts의 장기 phase 전개와 promotion gate 관리
 - Source Type: Roadmap / Goal State
 - Baseline Date: 2026-04-14 (KST)
-- Current Phase: Phase 3 diagnostics and model lifecycle closed / Phase 4 reference-audio assist + optional service adapter evaluation active-next
+- Current Phase: Phase 4a reference-audio assist and local CLI UX closed / Phase 4b optional service adapter evaluation active-next
 - Update Trigger: phase 순서, exit gate, promotion rule이 바뀔 때
 - Excluded Content: 현재 코드 사실, file path evidence, 상세 실행 로그
 
@@ -13,10 +13,10 @@
 
 ## 2. Current Header
 
-- Current sub-phase: **Phase 4 planning for reference-audio assist + optional service adapter evaluation**
-- Next sub-phase: **reference clip assist scope definition**
+- Current sub-phase: **Phase 4b optional service adapter evaluation planning**
+- Next sub-phase: **service adapter decision memo**
 - Next major phase: **optional service adapter decision**
-- Queued candidate slice: **profile browsing UX와 richer runtime observability**
+- Queued candidate slice: **richer runtime observability**
 
 ## 3. Phase Snapshot
 
@@ -26,7 +26,8 @@
 | Phase 1 | Local-first bootstrap and CLI runtime | `uv`, `src/voice_tts`, CLI, doctor, settings, tests가 repo에 landed 되었다 | Closed |
 | Phase 2 | Core local synthesis MVP | local synthesize command, model profile manifest, external checkout adapter, WAV output이 들어왔다 | Closed |
 | Phase 3 | Model lifecycle and diagnostics | typed metadata, compatibility preflight, richer doctor output, runtime diagnostics가 들어왔다 | Closed |
-| Phase 4 | Reference-audio assist and optional service adapters | higher-level ref audio assist와 service adapter 여부 판단은 아직 없다 | Active-next |
+| Phase 4a | Reference-audio assist and local CLI UX | first-run setup, profile discovery, reference clip assist가 landed 되었다 | Closed |
+| Phase 4b | Optional service adapters | service adapter 여부 판단은 아직 없다 | Active-next |
 
 ## 4. Phase Roadmap
 
@@ -83,15 +84,26 @@
 3. bootstrap/diagnostic output이 local troubleshooting에 충분하다.
 - Gate status: Closed
 
-### Phase 4: Reference-Audio Assist and Optional Service Adapters
+### Phase 4a: Reference-Audio Assist and Local CLI UX
 
-- Goal: manual trim만으로 부족한 reference audio prep를 보완하고, local core 위에 optional service adapter가 필요한지 판단한다.
+- Goal: manual trim만으로 부족한 reference audio prep를 보완하고 first-run local CLI UX를 완성한다.
 - Depends on: Phase 3 closure.
 - Repo Status: 현재 repo에는 intentionally no web/API surface 상태이며, local CLI가 canonical debug path다.
 - Exit gate:
 1. reference-audio assist 범위가 local-first canon을 깨지 않도록 정의된다.
-2. optional service adapter 도입 여부가 domain/application seam 기준으로 평가된다.
+2. first-run onboarding과 profile discovery surface가 local CLI 안에서 이어진다.
 3. local CLI path는 계속 canonical debug path로 유지된다.
+- Gate status: Closed
+
+### Phase 4b: Optional Service Adapters
+
+- Goal: local core 위에 optional service adapter가 필요한지 domain/application seam 기준으로 판단한다.
+- Depends on: Phase 4a closure.
+- Repo Status: reference-audio assist와 first-run CLI UX는 landed 되었고, web/API는 여전히 intentionally absent다.
+- Exit gate:
+1. optional service adapter 도입 여부가 domain/application seam 기준으로 평가된다.
+2. local CLI path는 계속 canonical debug path로 유지된다.
+3. adapter를 열더라도 local-first debugging truth가 약화되지 않는다.
 - Gate status: Active-next
 
 ## 5. Promotion Rules

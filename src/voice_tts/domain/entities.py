@@ -135,3 +135,53 @@ class SynthesisResult:
             raise ValueError("sample_rate must be positive")
         if self.audio_path.suffix.lower() != ".wav":
             raise ValueError("audio_path must end with .wav")
+
+
+@dataclass(frozen=True, slots=True)
+class AudioSourceMetadata:
+    duration_sec: float
+    sample_rate: int | None = None
+    channels: int | None = None
+    format_name: str | None = None
+    container_name: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.duration_sec <= 0.0:
+            raise ValueError("duration_sec must be positive")
+        if self.sample_rate is not None and self.sample_rate <= 0:
+            raise ValueError("sample_rate must be positive when set")
+        if self.channels is not None and self.channels <= 0:
+            raise ValueError("channels must be positive when set")
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceClipCandidate:
+    start_sec: float
+    end_sec: float
+
+    def __post_init__(self) -> None:
+        if self.start_sec < 0.0:
+            raise ValueError("start_sec must be >= 0.0")
+        if self.end_sec <= self.start_sec:
+            raise ValueError("end_sec must be greater than start_sec")
+
+    @property
+    def duration_sec(self) -> float:
+        return self.end_sec - self.start_sec
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceAudioPreparationResult:
+    source_path: Path
+    source_metadata: AudioSourceMetadata
+    candidates: tuple[ReferenceClipCandidate, ...] = field(default_factory=tuple)
+    exported_clip_path: Path | None = None
+    selected_candidate: ReferenceClipCandidate | None = None
+
+    def __post_init__(self) -> None:
+        if not str(self.source_path).strip():
+            raise ValueError("source_path must not be blank")
+        if self.exported_clip_path is not None and self.exported_clip_path.suffix.lower() != ".wav":
+            raise ValueError("exported_clip_path must end with .wav")
+        if self.exported_clip_path is None and self.selected_candidate is not None:
+            raise ValueError("selected_candidate requires an exported clip path")

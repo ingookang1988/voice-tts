@@ -9,3 +9,19 @@ def find_ffmpeg_executable() -> Path | None:
     if executable is None:
         return None
     return Path(executable)
+
+
+def find_ffprobe_executable() -> Path | None:
+    executable = shutil.which("ffprobe")
+    if executable is not None:
+        return Path(executable)
+
+    ffmpeg = find_ffmpeg_executable()
+    if ffmpeg is None:
+        return None
+
+    suffix = ffmpeg.suffix
+    sibling = ffmpeg.with_name(f"ffprobe{suffix}")
+    if sibling.exists():
+        return sibling
+    return None

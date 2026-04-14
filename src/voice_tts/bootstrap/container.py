@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from voice_tts.application.use_cases import SynthesizeSpeechUseCase
+from voice_tts.application.use_cases import PrepareReferenceAudioUseCase, SynthesizeSpeechUseCase
 from voice_tts.infrastructure.config import Settings
 from voice_tts.infrastructure.engines import GptSovitsV2SpeechSynthesisEngine
 from voice_tts.infrastructure.logging import configure_logging
+from voice_tts.infrastructure.reference_audio import FfmpegReferenceAudioPreparationService
 from voice_tts.infrastructure.repositories import JsonModelProfileRepository
 
 
@@ -14,7 +15,9 @@ class ApplicationContainer:
     settings: Settings
     model_profile_repository: JsonModelProfileRepository
     synthesis_engine: GptSovitsV2SpeechSynthesisEngine
+    reference_audio_service: FfmpegReferenceAudioPreparationService
     synthesize_speech: SynthesizeSpeechUseCase
+    prepare_reference_audio: PrepareReferenceAudioUseCase
 
 
 def build_container(settings: Settings | None = None) -> ApplicationContainer:
@@ -28,14 +31,21 @@ def build_container(settings: Settings | None = None) -> ApplicationContainer:
         use_fp16=resolved_settings.use_fp16,
         temp_root=resolved_settings.temp_root,
     )
+    reference_audio_service = FfmpegReferenceAudioPreparationService()
     synthesize_speech = SynthesizeSpeechUseCase(
         model_profile_repository=model_profile_repository,
         engine=synthesis_engine,
         output_root=resolved_settings.output_root,
     )
+    prepare_reference_audio = PrepareReferenceAudioUseCase(
+        reference_audio_service=reference_audio_service,
+        temp_root=resolved_settings.temp_root,
+    )
     return ApplicationContainer(
         settings=resolved_settings,
         model_profile_repository=model_profile_repository,
         synthesis_engine=synthesis_engine,
+        reference_audio_service=reference_audio_service,
         synthesize_speech=synthesize_speech,
+        prepare_reference_audio=prepare_reference_audio,
     )
